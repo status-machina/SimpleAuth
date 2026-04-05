@@ -42,10 +42,11 @@ public class AuthCommand {
             mod.authenticate(player.getUUID());
             mod.getDatabase().updateLastLogin(player.getName().getString());
 
-            // Unlock the player
+            // Unlock the player - restore abilities based on game mode
             player.setInvulnerable(false);
             player.getAbilities().flying = false;
-            player.getAbilities().mayfly = false;
+            // Keep mayfly if in creative/spectator, remove if survival/adventure
+            player.getAbilities().mayfly = player.isCreative() || player.isSpectator();
             player.onUpdateAbilities();
 
             player.sendSystemMessage(Component.literal("§a✓ Successfully authenticated!"));
