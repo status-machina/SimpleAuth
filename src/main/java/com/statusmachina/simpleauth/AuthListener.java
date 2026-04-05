@@ -23,6 +23,7 @@ public class AuthListener implements ServerPlayConnectionEvents.Join {
 
         // Check for valid remember session
         if (mod.getDatabase().hasValidRememberSession(username, ipAddress)) {
+            // Auto-authenticate and restore default game mode (no need to save/restore since we're not locking)
             mod.authenticate(player.getUUID());
             player.sendSystemMessage(Component.literal("§a✓ Automatically authenticated! (remembered from " + ipAddress + ")"));
             return;
@@ -31,11 +32,9 @@ public class AuthListener implements ServerPlayConnectionEvents.Join {
         // Mark as unauthenticated
         mod.unauthenticate(player.getUUID());
 
-        // Lock the player
-        player.setInvulnerable(true);
-        player.getAbilities().mayfly = true;
-        player.getAbilities().flying = true;
-        player.onUpdateAbilities();
+        // Save original game mode and set to spectator
+        mod.saveGameMode(player.getUUID(), player.gameMode.getGameModeForPlayer());
+        player.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
 
         // Schedule timeout (kick after 90 seconds if not authenticated)
         mod.scheduleTimeout(player.getUUID(), () -> {

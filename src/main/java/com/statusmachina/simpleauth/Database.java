@@ -153,7 +153,7 @@ public class Database {
         } catch (SQLException e) {
             // Return default if not set
         }
-        return 90; // Default 90 seconds
+        return 45; // Default 45 seconds
     }
 
     public void saveRememberSession(String username, String ipAddress) {

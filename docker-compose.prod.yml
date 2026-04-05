@@ -1,19 +1,19 @@
-version: '3.8'
+version: "3.8"
 services:
   mc:
-    image: 'itzg/minecraft-server:java25'
+    image: "itzg/minecraft-server:java25"
     container_name: mc-server
     ports:
-      - '25565:25565'      # Java Edition
+      - "25565:25565" # Java Edition
     environment:
       VERSION: 26.1.1
-      EULA: 'TRUE'
+      EULA: "TRUE"
       TYPE: FABRIC
       MODE: CREATIVE
-      FORCE_GAMEMODE: 'TRUE'
-      ONLINE_MODE: 'FALSE'
-      ENABLE_WHITELIST: 'FALSE'  # Let SimpleAuth handle authentication
-      OPS: Dad
+      FORCE_GAMEMODE: "TRUE"
+      ONLINE_MODE: "FALSE"
+      ENABLE_WHITELIST: "FALSE" # Let SimpleAuth handle authentication
+      OPS: Dad # Your admin user here
       MEMORY: 6G
       # Fabric specific
       FABRIC_LOADER_VERSION: 0.18.6
@@ -23,7 +23,7 @@ services:
       # Auto-download mods
       MODS: https://github.com/status-machina/SimpleAuth/releases/latest/download/SimpleAuth-1.1.0.jar
     volumes:
-      - 'mc_data:/data'
+      - "mc_data:/data"
     stdin_open: true
     tty: true
 

@@ -6,6 +6,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.level.GameType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +29,7 @@ public class SimpleAuth implements DedicatedServerModInitializer {
     private Database database;
     private final Set<UUID> authenticatedPlayers = new HashSet<>();
     private final Map<UUID, ScheduledFuture<?>> timeoutTasks = new HashMap<>();
+    private final Map<UUID, GameType> originalGameModes = new HashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private MinecraftServer server;
 
@@ -88,6 +90,15 @@ public class SimpleAuth implements DedicatedServerModInitializer {
     public void unauthenticate(UUID playerUuid) {
         authenticatedPlayers.remove(playerUuid);
         cancelTimeout(playerUuid);
+        originalGameModes.remove(playerUuid);
+    }
+
+    public void saveGameMode(UUID playerUuid, GameType gameType) {
+        originalGameModes.put(playerUuid, gameType);
+    }
+
+    public GameType getOriginalGameMode(UUID playerUuid) {
+        return originalGameModes.getOrDefault(playerUuid, GameType.SURVIVAL);
     }
 
     public void scheduleTimeout(UUID playerUuid, Runnable task) {
