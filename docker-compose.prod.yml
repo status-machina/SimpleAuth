@@ -17,6 +17,9 @@ services:
       MEMORY: 6G
       # Fabric specific
       FABRIC_LOADER_VERSION: 0.18.6
+      # Auto-remove old mods on update
+      REMOVE_OLD_MODS: "TRUE"
+      REMOVE_OLD_MODS_INCLUDE: "SimpleAuth*.jar"
       # Auto-download mods
       MODS: https://github.com/status-machina/SimpleAuth/releases/latest/download/SimpleAuth-1.1.0.jar
     volumes:
