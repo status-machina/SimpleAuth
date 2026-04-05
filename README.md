@@ -1,143 +1,364 @@
 # SimpleAuth
 
-Dead-simple CLI-based authentication mod for Fabric on Minecraft 26.1 ("Tiny Takeover").
+Dead-simple authentication mod for Fabric on Minecraft 26.1 ("Tiny Takeover").
+
+Secure your offline-mode server with password authentication, IP-based session caching, and spectator mode enforcement.
+
+---
 
 ## Features
 
-- **Console-only password management** - Admins set passwords via `/setpassword` from console
-- **Player lock system** - Unauthenticated players are frozen (no movement, no commands except `/login`)
-- **BCrypt password hashing** - Industry-standard secure password storage
-- **SQLite database** - Lightweight, file-based storage
-- **Geyser + Floodgate** - Full Bedrock player support
+- **Console-only password management** - Admins control who can login
+- **Spectator mode enforcement** - Unauthenticated players can't build, break, or interact
+- **Remember me system** - Auto-login for players from known IPs
+- **Configurable timeouts** - Auto-kick players who don't authenticate fast enough
+- **Secure password storage** - Industry-standard encryption
 
-## Requirements
+---
 
-- **Java 25+** (required for Minecraft 26.1)
-- **Fabric Server** with Minecraft 26.1
-- **Fabric Loader 0.18.6+**
-- **Fabric API 0.145.3+26.1.1**
+## Instructions for End Users
 
-## Building
+### Requirements
 
+- Minecraft 26.1.1 (Java Edition)
+- Fabric Loader 0.18.6+
+- Fabric API 0.145.3+26.1.1
+- Java 25+
+
+### Installation Method 1: Manual Install
+
+**1. Download the latest release:**
 ```bash
-JAVA_HOME="/Users/dallashall/Library/Application Support/PrismLauncher/java/java-runtime-epsilon" ./gradlew build
+wget https://github.com/status-machina/SimpleAuth/releases/latest/download/SimpleAuth-1.1.1.jar
 ```
 
-The output jar will be in `build/libs/SimpleAuth-1.0-SNAPSHOT.jar`
+**2. Install on your server:**
+- Place `SimpleAuth-1.1.1.jar` in your Fabric server's `mods/` folder
+- Restart the server
+- Database will be created at `config/simpleauth/auth.db`
 
-## Production Deployment
+**3. Set up passwords:**
+- Access your server console
+- Run `setpassword <username> <password>` for each player
 
-Deploy a full server with Java + Bedrock support:
+### Installation Method 2: Docker Compose
 
+**1. Copy the template:**
 ```bash
-# Build and deploy (one command)
-./deploy-prod.sh
+curl -O https://raw.githubusercontent.com/status-machina/SimpleAuth/main/docker-compose.prod.yml
+```
 
-# Or manually:
-./gradlew build
+**2. Customize for your server:**
+
+Edit `docker-compose.prod.yml` and update:
+- `OPS: Dad` → Change to your admin username
+- `MEMORY: 6G` → Adjust memory allocation
+- Ports if needed
+
+**3. Deploy:**
+```bash
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-The production server includes:
-- **Fabric 26.1.1** on Java 25
-- **SimpleAuth** for authentication
-- Java Edition: `localhost:25565`
-- Op: `Dad`
-
-> **Note:** Geyser/Floodgate (Bedrock support) is not yet available for Minecraft 26.1. Once they release 26.1 support, you can add them to the MODS list.
-
+**4. Access console:**
 ```bash
-# View logs
-docker-compose -f docker-compose.prod.yml logs -f mc
-
-# Access console
 docker exec -it mc-server rcon-cli
-
-# Stop server (keep data)
-docker-compose -f docker-compose.prod.yml down
-
-# Stop and wipe data
-docker-compose -f docker-compose.prod.yml down -v
 ```
 
-## Testing with Docker
-
-A lightweight test environment for development:
-
+**5. Set up passwords:**
 ```bash
-# Build and start test server (one command)
-./test-server.sh
-
-# Or manually:
-./gradlew build
-docker-compose up -d
-docker-compose logs -f mc
-
-# Stop server
-docker-compose down
-
-# Stop and wipe data
-docker-compose down -v
+setpassword YourUsername password123
 ```
 
-The test server is a minimal setup:
-- **Fabric Server** for Minecraft 26.1 on Java 25
-- **SimpleAuth** (auto-mounted from `build/libs/`)
-- No whitelist or additional mods
-- Op: `Dad`
+**Managing your server:**
 
-## Installation
-
-1. Build the mod or download the jar
-2. Place in your Fabric server's `mods/` folder
-3. Restart the server
-4. Database will be created at `config/simpleauth/auth.db`
-
-## Usage
-
-### Setting a player's password (console-only):
-
-```
-setpassword PlayerName their_secure_password
+View logs:
+```bash
+docker-compose -f docker-compose.prod.yml logs -f mc
 ```
 
-### Player login:
-
+Update to latest version:
+```bash
+docker-compose -f docker-compose.prod.yml restart
 ```
-/login their_secure_password
+Old versions are automatically removed and latest is downloaded.
+
+Stop server:
+```bash
+docker-compose -f docker-compose.prod.yml down
 ```
 
-## How it works
+### Console Commands (Admins Only)
 
-1. **Player joins** - They are locked (invulnerable, frozen, can't interact)
-2. **Console sets password** - Admin runs `/setpassword PlayerName password` from console
-3. **Player authenticates** - Player runs `/login password` in chat
-4. **Lock released** - Player can now move and play normally
+All commands must be run from the server console:
+
+#### Set Player Password
+```bash
+setpassword <username> <password>
+```
+**Examples:**
+```bash
+setpassword Notch supersecret123
+setpassword Dad mypassword
+```
+
+#### Configure Remember Me
+```bash
+setrememberusers <duration>
+```
+**Format:** Number followed by `d` for days
+
+**Examples:**
+```bash
+setrememberusers 7d      # Remember for 7 days
+setrememberusers 30d     # Remember for 30 days
+setrememberusers 0d      # Disable remember me
+```
+
+#### Configure Auth Timeout
+```bash
+setauthtimeout <seconds>
+```
+**Format:** Number only (in seconds, no suffix)
+
+**Examples:**
+```bash
+setauthtimeout 45        # 45 seconds (default)
+setauthtimeout 120       # 2 minutes
+setauthtimeout 30        # 30 seconds
+```
+
+**Valid range:** 10-600 seconds
+
+> **Note:** Command formats differ - `setrememberusers` requires `d` suffix (e.g., `7d`), while `setauthtimeout` takes plain numbers (e.g., `45`).
+
+### Player Commands
+
+#### Login
+```
+/login <password>
+```
+**Example:**
+```
+/login supersecret123
+```
+
+Must be used within the timeout period (default 45 seconds) after joining.
+
+### How It Works
+
+**When a player joins:**
+1. Immediately placed in **Spectator mode** (can't build/break/interact)
+2. Authentication timeout starts (45 seconds by default)
+3. Two possible paths:
+   - **Remembered IP:** Auto-authenticated instantly
+   - **New/expired session:** Must login with password
+
+**If player doesn't authenticate in time:**
+- Kicked with message: "Authentication timeout!"
+- Can rejoin and try again
+
+**After successful authentication:**
+- Restored to original game mode (Creative, Survival, etc.)
+- Can play normally
+- Session saved if remember me is enabled
+
+**Remember me system:**
+- Saves IP + username after successful login
+- Auto-authenticates on future joins from same IP
+- Expires after configured duration (e.g., 7 days)
+- Can be disabled with `setrememberusers 0d`
+
+### Security Notes
+
+- ✅ **Passwords hashed with BCrypt** - Industry standard, salt rounds = 12
+- ✅ **Console-only password setting** - Players can't set or change passwords
+- ✅ **Spectator mode enforcement** - Prevents griefing while unauthenticated
+- ✅ **Everyone must authenticate** - Even OPs/admins (prevents username spoofing)
+- ✅ **Timeout enforcement** - Kicks idle unauthenticated players
+- ✅ **IP-based sessions** - Optional convenience with configurable expiration
+
+**Why OPs must authenticate:**
+Since this is designed for offline-mode servers, anyone can join with any username (including "Dad" or other admin names). Password authentication is the only security barrier.
+
+### Troubleshooting
+
+**Players can't login:**
+- Verify password was set via console: `setpassword <username> <password>`
+- Check server logs for authentication attempts
+- Ensure player is using correct username (case-sensitive)
+
+**Old version still loading after update:**
+- Docker: Ensure `REMOVE_OLD_MODS: "TRUE"` is set in environment variables
+- Manual: Remove old `SimpleAuth-*.jar` files from `mods/` folder and restart
+
+**Database errors:**
+- Ensure `config/simpleauth/` directory is writable
+- Check disk space
+- Verify no other process is locking `auth.db`
+
+---
 
 ## Technical Details
 
-- **Fabric for Minecraft 26.1** - First unobfuscated Minecraft version!
-- **Mojang Mappings** - No Yarn, direct Mojang class names
-- **Java 25** features (modern LTS)
-- **BCrypt** with salt rounds = 12
-- **Fabric API** for events and commands
-- **SQLite** for persistent storage
-- **No remapping** - Fast mod loading
+### Architecture
 
-## Security Notes
+**Password Storage:** BCrypt hashing with salt rounds = 12
 
-- Passwords are hashed with BCrypt before storage
-- Only console can set passwords (prevents player abuse)
-- Unauthenticated players are completely locked out
-- Chat is blocked to prevent password leaking
+**Database:** SQLite with three tables:
+- `players` - Usernames, BCrypt password hashes, last login timestamps
+- `remember_sessions` - IP + username pairs with expiration timestamps
+- `config` - Server settings (remember duration, auth timeout)
 
-## Future Enhancements
+**Database location:** `config/simpleauth/auth.db`
 
-- [ ] Geyser form integration for Bedrock players
-- [ ] Registration system (players can set their own password on first join)
-- [ ] Session timeout (require re-auth after X minutes)
-- [ ] Admin commands to view/manage accounts
+**Dependencies:**
+- BCrypt (org.mindrot:jbcrypt:0.4) - Password hashing
+- SQLite JDBC (org.xerial:sqlite-jdbc:3.45.1.0) - Database
+- Fabric API 0.145.3+26.1.1 - Events and commands
+- Fabric Loader 0.18.6+ - Mod loading
+
+### Implementation Details
+
+- **Unobfuscated Minecraft:** Uses Mojang mappings directly (26.1 is first unobfuscated version)
+- **No remapping needed:** Faster mod loading
+- **Java 25 features:** Modern LTS
+- **Scheduled executor:** Handles authentication timeouts
+- **Event-driven:** Uses Fabric API events for player join/disconnect
+- **Game mode preservation:** Saves and restores player's original game mode
+
+### Authentication Flow
+
+```
+Player Join
+    ↓
+Check remember session (IP + username)
+    ↓
+Yes → Auto-authenticate → Restore game mode
+    ↓
+No → Spectator mode → Start timeout → Wait for /login
+    ↓
+Login successful → Restore game mode → Save session (if remember enabled)
+    ↓
+Login failed / timeout → Kick player
+```
+
+### Compatibility
+
+- **Minecraft:** 26.1.1 (Java Edition)
+- **Fabric Loader:** 0.18.6+
+- **Fabric API:** 0.145.3+26.1.1
+- **Java:** 25+
+
+**Bedrock Edition:** Not currently supported (Geyser/Floodgate not yet compatible with 26.1)
+
+---
+
+## Local Development
+
+### Building from Source
+
+**Prerequisites:**
+- Java 25 installed
+- Git
+
+**Build:**
+```bash
+git clone https://github.com/status-machina/SimpleAuth.git
+cd SimpleAuth
+
+# Set JAVA_HOME to Java 25 installation
+export JAVA_HOME="/path/to/java25"
+
+# Build
+./gradlew build
+```
+
+**Output:** `build/libs/SimpleAuth-1.1.1.jar`
+
+### Local Testing
+
+**Start test server:**
+```bash
+./test-server.sh
+```
+
+**Or manually:**
+```bash
+./gradlew build
+docker-compose up -d
+docker-compose logs -f mc
+```
+
+**Test server includes:**
+- Fabric 26.1.1 on Java 25
+- SimpleAuth (auto-mounted from `build/libs/`)
+- Creative mode, no whitelist
+- Op: `Dad`
+
+**Access console:**
+```bash
+docker exec -it mc-simpleauth-fabric rcon-cli
+```
+
+**Stop test server:**
+```bash
+docker-compose down
+```
+
+**Wipe data:**
+```bash
+docker-compose down -v
+```
+
+### Project Structure
+
+```
+SimpleAuth/
+├── src/main/java/com/statusmachina/simpleauth/
+│   ├── SimpleAuth.java          # Main mod class
+│   ├── AuthListener.java        # Player join/disconnect events
+│   ├── AuthCommand.java         # /login command
+│   ├── ConsoleCommand.java      # Console commands
+│   └── Database.java            # SQLite database
+├── src/main/resources/
+│   └── fabric.mod.json          # Mod metadata
+├── build.gradle.kts             # Build configuration
+├── gradle.properties            # Version info
+├── docker-compose.yml           # Test environment
+├── docker-compose.prod.yml      # Production deployment
+└── test-server.sh               # Quick test script
+```
+
+### Making Changes
+
+1. Make your changes to the source code
+2. Test locally: `./test-server.sh`
+3. Commit changes: `git commit -am "Description"`
+4. Create PR on GitHub
+
+### Release Process
+
+Releases are automated via GitHub Actions:
+
+1. Update version in `gradle.properties`
+2. Update version in `docker-compose.prod.yml`
+3. Commit and push
+4. Create tag: `git tag v1.x.x && git push origin v1.x.x`
+5. GitHub Actions builds and creates release automatically
+
+---
+
+## Contributing
+
+Contributions welcome! Please open an issue or pull request.
 
 ## License
 
 MIT
+
+## Links
+
+- **GitHub:** https://github.com/status-machina/SimpleAuth
+- **Releases:** https://github.com/status-machina/SimpleAuth/releases
+- **Issues:** https://github.com/status-machina/SimpleAuth/issues
