@@ -41,10 +41,10 @@ docker-compose -f docker-compose.prod.yml up -d
 The production server includes:
 - **Fabric 26.1.1** on Java 25
 - **SimpleAuth** for authentication
-- **Geyser + Floodgate** (Bedrock support)
 - Java Edition: `localhost:25565`
-- Bedrock Edition: `localhost:19132`
 - Op: `Dad`
+
+> **Note:** Geyser/Floodgate (Bedrock support) is not yet available for Minecraft 26.1. Once they release 26.1 support, you can add them to the MODS list.
 
 ```bash
 # View logs
