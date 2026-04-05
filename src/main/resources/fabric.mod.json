@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "simpleauth",
+  "version": "${version}",
+  "name": "SimpleAuth",
+  "description": "Dead-simple authentication for Minecraft servers",
+  "authors": [
+    "StatusMachina"
+  ],
+  "contact": {
+    "homepage": "https://github.com/statusmachina/simpleauth"
+  },
+  "license": "MIT",
+  "icon": "assets/simpleauth/icon.png",
+  "environment": "server",
+  "entrypoints": {
+    "server": [
+      "com.statusmachina.simpleauth.SimpleAuth"
+    ]
+  },
+  "mixins": [],
+  "depends": {
+    "fabricloader": ">=0.18.6",
+    "minecraft": "~26.1.1",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}

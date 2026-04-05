@@ -1,0 +1,29 @@
+services:
+  mc:
+    image: 'itzg/minecraft-server:java25'
+    container_name: mc-simpleauth-fabric
+    ports:
+      - '25565:25565'
+      - '19132:19132/udp'
+    environment:
+      VERSION: 26.1.1
+      EULA: 'TRUE'
+      TYPE: FABRIC
+      MODE: CREATIVE
+      FORCE_GAMEMODE: 'TRUE'
+      ONLINE_MODE: 'FALSE'
+      ENABLE_WHITELIST: 'FALSE'
+      OPS: Dad
+      MEMORY: 6G
+      # Fabric specific
+      FABRIC_LOADER_VERSION: 0.18.6
+      # Note: Geyser/Floodgate not available for Fabric 26.1 yet
+    volumes:
+      - 'mc_simpleauth_fabric:/data'
+      # Mount our built Fabric mod
+      - './build/libs/SimpleAuth-1.0.0.jar:/data/mods/SimpleAuth.jar:ro'
+    stdin_open: true
+    tty: true
+
+volumes:
+  mc_simpleauth_fabric:

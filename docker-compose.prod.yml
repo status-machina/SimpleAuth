@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  mc:
+    image: 'itzg/minecraft-server:java25'
+    container_name: mc-server
+    ports:
+      - '25565:25565'      # Java Edition
+      - '19132:19132/udp'  # Bedrock Edition (Geyser)
+    environment:
+      VERSION: 26.1.1
+      EULA: 'TRUE'
+      TYPE: FABRIC
+      MODE: CREATIVE
+      FORCE_GAMEMODE: 'TRUE'
+      ONLINE_MODE: 'FALSE'
+      ENABLE_WHITELIST: 'FALSE'  # Let SimpleAuth handle authentication
+      OPS: Dad
+      MEMORY: 6G
+      # Fabric specific
+      FABRIC_LOADER_VERSION: 0.18.6
+      # Auto-download mods
+      MODS: |
+        https://github.com/YOURUSER/SimpleAuth/releases/latest/download/simpleauth-1.0.0.jar
+        https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/fabric
+        https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/fabric
+    volumes:
+      - 'mc_data:/data'
+    stdin_open: true
+    tty: true
+
+volumes:
+  mc_data:
