@@ -39,8 +39,12 @@ public class AuthCommand {
 
         if (mod.getDatabase().checkPassword(player.getName().getString(), password)) {
             // Success!
+            String username = player.getName().getString();
+            String ipAddress = player.getIpAddress();
+
             mod.authenticate(player.getUUID());
-            mod.getDatabase().updateLastLogin(player.getName().getString());
+            mod.getDatabase().updateLastLogin(username);
+            mod.getDatabase().saveRememberSession(username, ipAddress);
 
             // Unlock the player - restore abilities based on game mode
             player.setInvulnerable(false);
@@ -50,6 +54,12 @@ public class AuthCommand {
             player.onUpdateAbilities();
 
             player.sendSystemMessage(Component.literal("§a✓ Successfully authenticated!"));
+
+            int rememberDays = mod.getDatabase().getRememberDuration();
+            if (rememberDays > 0) {
+                player.sendSystemMessage(Component.literal("§7You will be remembered for " + rememberDays + " days."));
+            }
+
             return 1;
         } else {
             player.sendSystemMessage(Component.literal("§c✗ Invalid password!"));

@@ -19,7 +19,7 @@ public class Database {
             String url = "jdbc:sqlite:" + dbFile.getAbsolutePath();
             connection = DriverManager.getConnection(url);
 
-            // Create table if it doesn't exist
+            // Create tables if they don't exist
             try (Statement stmt = connection.createStatement()) {
                 stmt.execute("""
                     CREATE TABLE IF NOT EXISTS players (
@@ -27,6 +27,22 @@ public class Database {
                         username TEXT NOT NULL,
                         password_hash TEXT NOT NULL,
                         last_login INTEGER
+                    )
+                    """);
+
+                stmt.execute("""
+                    CREATE TABLE IF NOT EXISTS remember_sessions (
+                        username TEXT NOT NULL,
+                        ip_address TEXT NOT NULL,
+                        expires_at INTEGER NOT NULL,
+                        PRIMARY KEY (username, ip_address)
+                    )
+                    """);
+
+                stmt.execute("""
+                    CREATE TABLE IF NOT EXISTS config (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL
                     )
                     """);
             }
@@ -87,6 +103,100 @@ public class Database {
             stmt.executeUpdate();
         } catch (SQLException e) {
             // Log but don't fail auth on this
+        }
+    }
+
+    // Remember Sessions
+    public void setRememberDuration(int days) {
+        try (PreparedStatement stmt = connection.prepareStatement(
+                "INSERT OR REPLACE INTO config (key, value) VALUES ('remember_days', ?)")) {
+            stmt.setString(1, String.valueOf(days));
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to set remember duration", e);
+        }
+    }
+
+    public int getRememberDuration() {
+        try (PreparedStatement stmt = connection.prepareStatement(
+                "SELECT value FROM config WHERE key = 'remember_days'")) {
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Integer.parseInt(rs.getString("value"));
+                }
+            }
+        } catch (SQLException e) {
+            // Return 0 if not set
+        }
+        return 0;
+    }
+
+    // Auth Timeout
+    public void setAuthTimeout(int seconds) {
+        try (PreparedStatement stmt = connection.prepareStatement(
+                "INSERT OR REPLACE INTO config (key, value) VALUES ('auth_timeout_seconds', ?)")) {
+            stmt.setString(1, String.valueOf(seconds));
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to set auth timeout", e);
+        }
+    }
+
+    public int getAuthTimeout() {
+        try (PreparedStatement stmt = connection.prepareStatement(
+                "SELECT value FROM config WHERE key = 'auth_timeout_seconds'")) {
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Integer.parseInt(rs.getString("value"));
+                }
+            }
+        } catch (SQLException e) {
+            // Return default if not set
+        }
+        return 90; // Default 90 seconds
+    }
+
+    public void saveRememberSession(String username, String ipAddress) {
+        int days = getRememberDuration();
+        if (days <= 0) return;
+
+        long expiresAt = System.currentTimeMillis() + (days * 24L * 60L * 60L * 1000L);
+
+        try (PreparedStatement stmt = connection.prepareStatement(
+                "INSERT OR REPLACE INTO remember_sessions (username, ip_address, expires_at) VALUES (?, ?, ?)")) {
+            stmt.setString(1, username);
+            stmt.setString(2, ipAddress);
+            stmt.setLong(3, expiresAt);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            // Log but don't fail auth on this
+        }
+    }
+
+    public boolean hasValidRememberSession(String username, String ipAddress) {
+        try (PreparedStatement stmt = connection.prepareStatement(
+                "SELECT expires_at FROM remember_sessions WHERE username = ? COLLATE NOCASE AND ip_address = ?")) {
+            stmt.setString(1, username);
+            stmt.setString(2, ipAddress);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    long expiresAt = rs.getLong("expires_at");
+                    return System.currentTimeMillis() < expiresAt;
+                }
+            }
+        } catch (SQLException e) {
+            return false;
+        }
+        return false;
+    }
+
+    public void cleanExpiredSessions() {
+        try (PreparedStatement stmt = connection.prepareStatement(
+                "DELETE FROM remember_sessions WHERE expires_at < ?")) {
+            stmt.setLong(1, System.currentTimeMillis());
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            // Log but don't fail on cleanup
         }
     }
 

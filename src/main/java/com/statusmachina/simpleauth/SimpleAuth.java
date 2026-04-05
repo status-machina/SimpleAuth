@@ -10,9 +10,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class SimpleAuth implements DedicatedServerModInitializer {
     public static final String MOD_ID = "simpleauth";
@@ -21,6 +27,8 @@ public class SimpleAuth implements DedicatedServerModInitializer {
     private static SimpleAuth instance;
     private Database database;
     private final Set<UUID> authenticatedPlayers = new HashSet<>();
+    private final Map<UUID, ScheduledFuture<?>> timeoutTasks = new HashMap<>();
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private MinecraftServer server;
 
     @Override
@@ -74,9 +82,25 @@ public class SimpleAuth implements DedicatedServerModInitializer {
 
     public void authenticate(UUID playerUuid) {
         authenticatedPlayers.add(playerUuid);
+        cancelTimeout(playerUuid);
     }
 
     public void unauthenticate(UUID playerUuid) {
         authenticatedPlayers.remove(playerUuid);
+        cancelTimeout(playerUuid);
+    }
+
+    public void scheduleTimeout(UUID playerUuid, Runnable task) {
+        int timeoutSeconds = database.getAuthTimeout();
+        // Wrap task to run on server thread
+        ScheduledFuture<?> future = scheduler.schedule(() -> server.execute(task), timeoutSeconds, TimeUnit.SECONDS);
+        timeoutTasks.put(playerUuid, future);
+    }
+
+    public void cancelTimeout(UUID playerUuid) {
+        ScheduledFuture<?> future = timeoutTasks.remove(playerUuid);
+        if (future != null && !future.isDone()) {
+            future.cancel(false);
+        }
     }
 }
