@@ -22,7 +22,6 @@ services:
       MODS: |
         https://github.com/status-machina/SimpleAuth/releases/latest/download/SimpleAuth-1.0.0.jar
         https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/fabric
-        https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/fabric
     volumes:
       - 'mc_data:/data'
     stdin_open: true
