@@ -21,7 +21,7 @@ services:
       REMOVE_OLD_MODS: "TRUE"
       REMOVE_OLD_MODS_INCLUDE: "SimpleAuth*.jar"
       # Auto-download mods
-      MODS: https://github.com/status-machina/SimpleAuth/releases/latest/download/SimpleAuth-1.1.0.jar
+      MODS: https://github.com/status-machina/SimpleAuth/releases/latest/download/SimpleAuth-1.1.1.jar
     volumes:
       - "mc_data:/data"
     stdin_open: true
