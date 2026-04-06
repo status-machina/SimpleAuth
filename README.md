@@ -12,6 +12,7 @@ Secure your offline-mode server with password authentication, IP-based session c
 - **Spectator mode enforcement** - Unauthenticated players can't build, break, or interact
 - **Remember me system** - Auto-login for players from known IPs
 - **Configurable timeouts** - Auto-kick players who don't authenticate fast enough
+- **Brute-force protection** - Locks out repeated failed login attempts
 - **Secure password storage** - Industry-standard encryption
 
 ---
@@ -29,11 +30,11 @@ Secure your offline-mode server with password authentication, IP-based session c
 
 **1. Download the latest release:**
 ```bash
-wget https://github.com/status-machina/SimpleAuth/releases/latest/download/SimpleAuth-1.1.1.jar
+wget https://github.com/status-machina/SimpleAuth/releases/latest/download/SimpleAuth-1.2.0.jar
 ```
 
 **2. Install on your server:**
-- Place `SimpleAuth-1.1.1.jar` in your Fabric server's `mods/` folder
+- Place `SimpleAuth-1.2.0.jar` in your Fabric server's `mods/` folder
 - Restart the server
 - Database will be created at `config/simpleauth/auth.db`
 
@@ -177,6 +178,12 @@ Must be used within the timeout period (default 45 seconds) after joining.
 - ✅ **Everyone must authenticate** - Even OPs/admins (prevents username spoofing)
 - ✅ **Timeout enforcement** - Kicks idle unauthenticated players
 - ✅ **IP-based sessions** - Optional convenience with configurable expiration
+- ✅ **Rate limiting** - 3 failed login attempts triggers a 10-second cooldown
+- ✅ **Input validation** - Passwords must be 6-128 printable ASCII characters; usernames 3-16 alphanumeric
+- ✅ **Session invalidation** - Password changes automatically revoke all remembered sessions
+- ✅ **Audit logging** - All auth events logged (`AUTH_SUCCESS`, `AUTH_FAILURE`, `AUTH_TIMEOUT`, `PASSWORD_SET`, `CONFIG_CHANGE`)
+- ✅ **Thread-safe** - Concurrent access protected with lock-free data structures
+- ✅ **Clean shutdown** - Database and background tasks properly closed on server stop
 
 **Why OPs must authenticate:**
 Since this is designed for offline-mode servers, anyone can join with any username (including "Dad" or other admin names). Password authentication is the only security barrier.
@@ -185,8 +192,18 @@ Since this is designed for offline-mode servers, anyone can join with any userna
 
 **Players can't login:**
 - Verify password was set via console: `setpassword <username> <password>`
-- Check server logs for authentication attempts
+- Check server logs for `AUTH_FAILURE` entries
 - Ensure player is using correct username (case-sensitive)
+- Password must be 6-128 characters, printable ASCII only
+
+**"Too many failed attempts" message:**
+- Player hit the rate limit (3 failed attempts)
+- Wait 10 seconds and try again
+- Counter resets after 1 minute of no attempts
+
+**Player auto-login stopped working after password change:**
+- This is expected - password changes invalidate all remembered sessions
+- Player must login with the new password; a new session will be saved
 
 **Old version still loading after update:**
 - Docker: Ensure `REMOVE_OLD_MODS: "TRUE"` is set in environment variables
@@ -232,15 +249,19 @@ Since this is designed for offline-mode servers, anyone can join with any userna
 ```
 Player Join
     ↓
-Check remember session (IP + username)
+Check session (IP + username)
     ↓
-Yes → Auto-authenticate → Restore game mode
+Valid session → Auto-authenticate → Restore game mode
     ↓
-No → Spectator mode → Start timeout → Wait for /login
+No session → Spectator mode → Start timeout → Wait for /login
     ↓
-Login successful → Restore game mode → Save session (if remember enabled)
+/login attempt → Rate limit check → Validate input → Verify password
     ↓
-Login failed / timeout → Kick player
+Success → Restore game mode → Save session (if remember enabled)
+    ↓
+Failure → Record attempt (3 failures = 10s cooldown)
+    ↓
+Timeout → Kick player
 ```
 
 ### Compatibility
@@ -274,7 +295,7 @@ export JAVA_HOME="/path/to/java25"
 ./gradlew build
 ```
 
-**Output:** `build/libs/SimpleAuth-1.1.1.jar`
+**Output:** `build/libs/SimpleAuth-1.2.0.jar`
 
 ### Local Testing
 
@@ -316,11 +337,13 @@ docker-compose down -v
 ```
 SimpleAuth/
 ├── src/main/java/com/statusmachina/simpleauth/
-│   ├── SimpleAuth.java          # Main mod class
+│   ├── SimpleAuth.java          # Main mod class, auth state management
 │   ├── AuthListener.java        # Player join/disconnect events
 │   ├── AuthCommand.java         # /login command
-│   ├── ConsoleCommand.java      # Console commands
-│   └── Database.java            # SQLite database
+│   ├── ConsoleCommand.java      # Console commands (setpassword, etc.)
+│   ├── Database.java            # SQLite database
+│   ├── RateLimiter.java         # Brute-force protection
+│   └── InputValidator.java      # Username/password validation
 ├── src/main/resources/
 │   └── fabric.mod.json          # Mod metadata
 ├── build.gradle.kts             # Build configuration

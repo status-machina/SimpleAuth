@@ -21,10 +21,11 @@ public class AuthListener implements ServerPlayConnectionEvents.Join {
         String username = player.getName().getString();
         String ipAddress = player.getIpAddress();
 
-        // Check for valid remember session
-        if (mod.getDatabase().hasValidRememberSession(username, ipAddress)) {
+        // Check for valid session
+        if (mod.getDatabase().hasValidSession(username, ipAddress)) {
             // Auto-authenticate and restore default game mode (no need to save/restore since we're not locking)
             mod.authenticate(player.getUUID());
+            SimpleAuth.LOGGER.info("AUTH_SUCCESS: user={} ip={} method=remember_session", username, ipAddress);
             player.sendSystemMessage(Component.literal("§a✓ Automatically authenticated! (remembered from " + ipAddress + ")"));
             return;
         }
@@ -36,9 +37,13 @@ public class AuthListener implements ServerPlayConnectionEvents.Join {
         mod.saveGameMode(player.getUUID(), player.gameMode.getGameModeForPlayer());
         player.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
 
-        // Schedule timeout (kick after 90 seconds if not authenticated)
+        // Schedule timeout (kick after configured timeout if not authenticated)
         mod.scheduleTimeout(player.getUUID(), () -> {
             if (!mod.isAuthenticated(player.getUUID())) {
+                SimpleAuth.LOGGER.warn("AUTH_TIMEOUT: user={} ip={} timeout_seconds={}",
+                                      player.getName().getString(),
+                                      player.getIpAddress(),
+                                      mod.getDatabase().getAuthTimeout());
                 player.connection.disconnect(Component.literal("§cAuthentication timeout! You took too long to login."));
             }
         });

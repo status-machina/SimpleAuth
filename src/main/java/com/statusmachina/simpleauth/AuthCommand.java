@@ -29,7 +29,22 @@ public class AuthCommand {
             return 1;
         }
 
+        // Check rate limit
+        if (!mod.getRateLimiter().checkAttempt(player.getUUID())) {
+            int remainingSeconds = mod.getRateLimiter().getRemainingCooldown(player.getUUID());
+            player.sendSystemMessage(Component.literal("§c✗ Too many failed attempts! Wait " +
+                                                      remainingSeconds + " seconds."));
+            return 0;
+        }
+
         String password = StringArgumentType.getString(context, "password");
+
+        // Validate password input (prevent DOS with extremely long inputs)
+        String passwordError = InputValidator.validatePassword(password);
+        if (passwordError != null) {
+            player.sendSystemMessage(Component.literal("§c✗ " + passwordError));
+            return 0;
+        }
 
         if (!mod.getDatabase().hasPassword(player.getName().getString())) {
             player.sendSystemMessage(Component.literal("§cNo password set! Ask an admin to run: §e/setpassword " +
@@ -37,14 +52,17 @@ public class AuthCommand {
             return 0;
         }
 
-        if (mod.getDatabase().checkPassword(player.getName().getString(), password)) {
+        if (mod.getDatabase().verifyPassword(player.getName().getString(), password)) {
             // Success!
             String username = player.getName().getString();
             String ipAddress = player.getIpAddress();
 
+            SimpleAuth.LOGGER.info("AUTH_SUCCESS: user={} ip={} method=password", username, ipAddress);
+
             mod.authenticate(player.getUUID());
+            mod.getRateLimiter().clearAttempts(player.getUUID()); // Clear rate limit on success
             mod.getDatabase().updateLastLogin(username);
-            mod.getDatabase().saveRememberSession(username, ipAddress);
+            mod.getDatabase().saveSession(username, ipAddress);
 
             // Restore original game mode
             player.setGameMode(mod.getOriginalGameMode(player.getUUID()));
@@ -58,7 +76,19 @@ public class AuthCommand {
 
             return 1;
         } else {
-            player.sendSystemMessage(Component.literal("§c✗ Invalid password!"));
+            SimpleAuth.LOGGER.warn("AUTH_FAILURE: user={} ip={} reason=invalid_password",
+                                  player.getName().getString(),
+                                  player.getIpAddress());
+
+            mod.getRateLimiter().recordFailure(player.getUUID());
+
+            int remainingSeconds = mod.getRateLimiter().getRemainingCooldown(player.getUUID());
+            if (remainingSeconds > 0) {
+                player.sendSystemMessage(Component.literal("§c✗ Too many failed attempts! Wait " +
+                                                          remainingSeconds + " seconds before trying again."));
+            } else {
+                player.sendSystemMessage(Component.literal("§c✗ Invalid password!"));
+            }
             return 0;
         }
     }

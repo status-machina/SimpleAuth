@@ -55,14 +55,39 @@ public class Database {
     public void setPassword(String username, String password) {
         String hash = BCrypt.hashpw(password, BCrypt.gensalt(12));
 
-        try (PreparedStatement stmt = connection.prepareStatement(
-                "INSERT OR REPLACE INTO players (uuid, username, password_hash) VALUES (?, ?, ?)")) {
-            // Use username as temporary UUID for console-set passwords
-            stmt.setString(1, username.toLowerCase());
-            stmt.setString(2, username);
-            stmt.setString(3, hash);
-            stmt.executeUpdate();
+        try {
+            connection.setAutoCommit(false);
+
+            // Update password
+            try (PreparedStatement stmt = connection.prepareStatement(
+                    "INSERT OR REPLACE INTO players (uuid, username, password_hash) VALUES (?, ?, ?)")) {
+                // Use username as temporary UUID for console-set passwords
+                stmt.setString(1, username.toLowerCase());
+                stmt.setString(2, username);
+                stmt.setString(3, hash);
+                stmt.executeUpdate();
+            }
+
+            // Invalidate all remember sessions for this user
+            try (PreparedStatement stmt = connection.prepareStatement(
+                    "DELETE FROM remember_sessions WHERE username = ? COLLATE NOCASE")) {
+                stmt.setString(1, username);
+                int deleted = stmt.executeUpdate();
+                if (deleted > 0) {
+                    SimpleAuth.LOGGER.info("Invalidated {} remember session(s) for user: {}", deleted, username);
+                }
+            }
+
+            connection.commit();
+            connection.setAutoCommit(true);
+
         } catch (SQLException e) {
+            try {
+                connection.rollback();
+                connection.setAutoCommit(true);
+            } catch (SQLException ex) {
+                SimpleAuth.LOGGER.error("Failed to rollback transaction", ex);
+            }
             throw new RuntimeException("Failed to set password for " + username, e);
         }
     }
@@ -75,11 +100,12 @@ public class Database {
                 return rs.next();
             }
         } catch (SQLException e) {
+            SimpleAuth.LOGGER.error("Database error checking password existence for {}: {}", username, e.getMessage());
             return false;
         }
     }
 
-    public boolean checkPassword(String username, String password) {
+    public boolean verifyPassword(String username, String password) {
         try (PreparedStatement stmt = connection.prepareStatement(
                 "SELECT password_hash FROM players WHERE username = ? COLLATE NOCASE")) {
             stmt.setString(1, username);
@@ -90,6 +116,7 @@ public class Database {
                 }
             }
         } catch (SQLException e) {
+            SimpleAuth.LOGGER.error("Database error verifying password for {}: {}", username, e.getMessage());
             return false;
         }
         return false;
@@ -102,7 +129,8 @@ public class Database {
             stmt.setString(2, username);
             stmt.executeUpdate();
         } catch (SQLException e) {
-            // Log but don't fail auth on this
+            // Best-effort operation - log warning but don't fail authentication
+            SimpleAuth.LOGGER.warn("Failed to update last login for {}: {}", username, e.getMessage());
         }
     }
 
@@ -126,7 +154,7 @@ public class Database {
                 }
             }
         } catch (SQLException e) {
-            // Return 0 if not set
+            SimpleAuth.LOGGER.warn("Failed to get remember duration, using default: {}", e.getMessage());
         }
         return 0;
     }
@@ -151,12 +179,12 @@ public class Database {
                 }
             }
         } catch (SQLException e) {
-            // Return default if not set
+            SimpleAuth.LOGGER.warn("Failed to get auth timeout, using default: {}", e.getMessage());
         }
         return 45; // Default 45 seconds
     }
 
-    public void saveRememberSession(String username, String ipAddress) {
+    public void saveSession(String username, String ipAddress) {
         int days = getRememberDuration();
         if (days <= 0) return;
 
@@ -169,11 +197,12 @@ public class Database {
             stmt.setLong(3, expiresAt);
             stmt.executeUpdate();
         } catch (SQLException e) {
-            // Log but don't fail auth on this
+            // Best-effort operation - log warning but don't fail authentication
+            SimpleAuth.LOGGER.warn("Failed to save session for {} from {}: {}", username, ipAddress, e.getMessage());
         }
     }
 
-    public boolean hasValidRememberSession(String username, String ipAddress) {
+    public boolean hasValidSession(String username, String ipAddress) {
         try (PreparedStatement stmt = connection.prepareStatement(
                 "SELECT expires_at FROM remember_sessions WHERE username = ? COLLATE NOCASE AND ip_address = ?")) {
             stmt.setString(1, username);
@@ -185,6 +214,7 @@ public class Database {
                 }
             }
         } catch (SQLException e) {
+            SimpleAuth.LOGGER.error("Database error checking session for {} from {}: {}", username, ipAddress, e.getMessage());
             return false;
         }
         return false;
@@ -194,9 +224,13 @@ public class Database {
         try (PreparedStatement stmt = connection.prepareStatement(
                 "DELETE FROM remember_sessions WHERE expires_at < ?")) {
             stmt.setLong(1, System.currentTimeMillis());
-            stmt.executeUpdate();
+            int deleted = stmt.executeUpdate();
+            if (deleted > 0) {
+                SimpleAuth.LOGGER.info("Cleaned up {} expired remember session(s)", deleted);
+            }
         } catch (SQLException e) {
-            // Log but don't fail on cleanup
+            // Best-effort operation - log warning but continue
+            SimpleAuth.LOGGER.warn("Failed to clean expired sessions: {}", e.getMessage());
         }
     }
 
@@ -204,9 +238,10 @@ public class Database {
         try {
             if (connection != null && !connection.isClosed()) {
                 connection.close();
+                SimpleAuth.LOGGER.info("Database connection closed");
             }
         } catch (SQLException e) {
-            // Already closing, ignore
+            SimpleAuth.LOGGER.error("Error closing database connection", e);
         }
     }
 }
