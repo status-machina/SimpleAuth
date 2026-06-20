@@ -6,7 +6,7 @@ echo "🏗️  Building SimpleAuth..."
 
 echo ""
 echo "🐳 Starting production Minecraft server..."
-echo "   - Fabric 26.1.1 with SimpleAuth"
+echo "   - Fabric 26.2 with SimpleAuth"
 echo "   - Geyser + Floodgate (Bedrock support)"
 echo ""
 

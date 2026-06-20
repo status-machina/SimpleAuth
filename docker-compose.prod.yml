@@ -6,7 +6,7 @@ services:
     ports:
       - "25565:25565" # Java Edition
     environment:
-      VERSION: 26.1.1
+      VERSION: 26.2
       EULA: "TRUE"
       TYPE: FABRIC
       MODE: CREATIVE
@@ -16,12 +16,12 @@ services:
       OPS: Dad # Your admin user here
       MEMORY: 6G
       # Fabric specific
-      FABRIC_LOADER_VERSION: 0.18.6
+      FABRIC_LOADER_VERSION: 0.19.3
       # Auto-remove old mods on update
       REMOVE_OLD_MODS: "TRUE"
       REMOVE_OLD_MODS_INCLUDE: "SimpleAuth*.jar"
       # Auto-download mods
-      MODS: https://github.com/status-machina/SimpleAuth/releases/latest/download/SimpleAuth-1.2.0.jar
+      MODS: https://github.com/status-machina/SimpleAuth/releases/latest/download/SimpleAuth-1.3.0.jar
     volumes:
       - "mc_data:/data"
     stdin_open: true

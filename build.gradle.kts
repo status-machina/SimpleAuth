@@ -1,6 +1,6 @@
 plugins {
     java
-    id("net.fabricmc.fabric-loom") version "1.15-SNAPSHOT"
+    id("net.fabricmc.fabric-loom") version "1.17-SNAPSHOT"
 }
 
 version = project.property("mod_version") as String
@@ -12,10 +12,10 @@ repositories {
 }
 
 dependencies {
-    // 26.1 is UNOBFUSCATED - NO mappings line!
+    // 26.x is UNOBFUSCATED - NO mappings line!
     minecraft("com.mojang:minecraft:${project.property("minecraft_version")}")
 
-    // Use implementation (not modImplementation) for 26.1
+    // Use implementation (not modImplementation) for 26.x
     implementation("net.fabricmc:fabric-loader:${project.property("loader_version")}")
     include(implementation("net.fabricmc.fabric-api:fabric-api:${project.property("fabric_api_version")}")!!)
 
@@ -44,7 +44,7 @@ tasks {
         options.release = 25
     }
 
-    // Use jar (not remapJar) for 26.1
+    // Use jar (not remapJar) for 26.x
     jar {
         from("LICENSE") {
             rename { "${it}_${project.property("archives_base_name")}" }

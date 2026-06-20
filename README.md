@@ -1,6 +1,6 @@
 # SimpleAuth
 
-Dead-simple authentication mod for Fabric on Minecraft 26.1 ("Tiny Takeover").
+Dead-simple authentication mod for Fabric on Minecraft 26.2.
 
 Secure your offline-mode server with password authentication, IP-based session caching, and spectator mode enforcement.
 
@@ -21,20 +21,20 @@ Secure your offline-mode server with password authentication, IP-based session c
 
 ### Requirements
 
-- Minecraft 26.1.1 (Java Edition)
-- Fabric Loader 0.18.6+
-- Fabric API 0.145.3+26.1.1
+- Minecraft 26.2 (Java Edition)
+- Fabric Loader 0.19.3+
+- Fabric API 0.152.2+26.2
 - Java 25+
 
 ### Installation Method 1: Manual Install
 
 **1. Download the latest release:**
 ```bash
-wget https://github.com/status-machina/SimpleAuth/releases/latest/download/SimpleAuth-1.2.0.jar
+wget https://github.com/status-machina/SimpleAuth/releases/latest/download/SimpleAuth-1.3.0.jar
 ```
 
 **2. Install on your server:**
-- Place `SimpleAuth-1.2.0.jar` in your Fabric server's `mods/` folder
+- Place `SimpleAuth-1.3.0.jar` in your Fabric server's `mods/` folder
 - Restart the server
 - Database will be created at `config/simpleauth/auth.db`
 
@@ -232,12 +232,12 @@ Since this is designed for offline-mode servers, anyone can join with any userna
 **Dependencies:**
 - BCrypt (org.mindrot:jbcrypt:0.4) - Password hashing
 - SQLite JDBC (org.xerial:sqlite-jdbc:3.45.1.0) - Database
-- Fabric API 0.145.3+26.1.1 - Events and commands
-- Fabric Loader 0.18.6+ - Mod loading
+- Fabric API 0.152.2+26.2 - Events and commands
+- Fabric Loader 0.19.3+ - Mod loading
 
 ### Implementation Details
 
-- **Unobfuscated Minecraft:** Uses Mojang mappings directly (26.1 is first unobfuscated version)
+- **Unobfuscated Minecraft:** Uses Mojang mappings directly (26.1+ is unobfuscated)
 - **No remapping needed:** Faster mod loading
 - **Java 25 features:** Modern LTS
 - **Scheduled executor:** Handles authentication timeouts
@@ -266,12 +266,12 @@ Timeout → Kick player
 
 ### Compatibility
 
-- **Minecraft:** 26.1.1 (Java Edition)
-- **Fabric Loader:** 0.18.6+
-- **Fabric API:** 0.145.3+26.1.1
+- **Minecraft:** 26.2 (Java Edition)
+- **Fabric Loader:** 0.19.3+
+- **Fabric API:** 0.152.2+26.2
 - **Java:** 25+
 
-**Bedrock Edition:** Not currently supported (Geyser/Floodgate not yet compatible with 26.1)
+**Bedrock Edition:** Not currently supported (Geyser/Floodgate not yet compatible with 26.x)
 
 ---
 
@@ -295,7 +295,7 @@ export JAVA_HOME="/path/to/java25"
 ./gradlew build
 ```
 
-**Output:** `build/libs/SimpleAuth-1.2.0.jar`
+**Output:** `build/libs/SimpleAuth-1.3.0.jar`
 
 ### Local Testing
 
@@ -312,7 +312,7 @@ docker-compose logs -f mc
 ```
 
 **Test server includes:**
-- Fabric 26.1.1 on Java 25
+- Fabric 26.2 on Java 25
 - SimpleAuth (auto-mounted from `build/libs/`)
 - Creative mode, no whitelist
 - Op: `Dad`
