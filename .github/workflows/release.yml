@@ -32,10 +32,15 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
+      - name: Copy version-independent JAR
+        run: cp build/libs/SimpleAuth-${{ steps.get_version.outputs.VERSION }}.jar build/libs/SimpleAuth.jar
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: build/libs/SimpleAuth-*.jar
+          files: |
+            build/libs/SimpleAuth-*.jar
+            build/libs/SimpleAuth.jar
           generate_release_notes: true
           draft: false
           prerelease: false
