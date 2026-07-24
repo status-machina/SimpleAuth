@@ -21,8 +21,9 @@ import java.util.Locale;
  * running commands (spectator only restricts world interaction). A player who is an
  * operator by name — which happens on offline/cracked servers — can therefore run
  * /op, /gamemode, /summon, etc. during the pre-auth window. This gate is the actual
- * lock: every command whose executing entity is an unauthenticated player is cancelled,
- * with the sole exception of /login so they can still authenticate.
+ * lock: any command whose executing entity is an unauthenticated player is cancelled and
+ * the player is immediately disconnected, with the sole exception of /login so they can
+ * still authenticate.
  *
  * <p>Commands with no executing entity (console, command blocks, functions) are never
  * affected — {@code getEntity()} is null for those.
@@ -51,13 +52,14 @@ public class CommandsMixin {
             return;
         }
 
-        player.sendSystemMessage(Component.literal(
-            "§cYou must authenticate first: §6/login <password>"));
-        SimpleAuth.LOGGER.warn("AUTH_BLOCKED_COMMAND: user={} ip={} command={}",
+        // Any other command from an unauthenticated player is treated as hostile: cancel it
+        // and immediately disconnect them.
+        SimpleAuth.LOGGER.warn("AUTH_KICK_COMMAND: user={} ip={} command={}",
                                player.getName().getString(),
                                player.getIpAddress(),
                                root);
         ci.cancel();
+        player.connection.disconnect(Component.literal("§cBye."));
     }
 
     private static String simpleauth$rootLiteral(String command) {

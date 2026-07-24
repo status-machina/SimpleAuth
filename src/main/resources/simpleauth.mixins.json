@@ -4,7 +4,8 @@
   "package": "com.statusmachina.simpleauth.mixin",
   "compatibilityLevel": "JAVA_21",
   "server": [
-    "CommandsMixin"
+    "CommandsMixin",
+    "PlayerListMixin"
   ],
   "injectors": {
     "defaultRequire": 1
