@@ -3,8 +3,10 @@ package com.statusmachina.simpleauth;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.GameType;
 import org.slf4j.Logger;
@@ -49,6 +51,19 @@ public class SimpleAuth implements DedicatedServerModInitializer {
         ServerPlayConnectionEvents.JOIN.register(new AuthListener(this));
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             unauthenticate(handler.getPlayer().getUUID()); // Mojang mapping: getUUID()
+        });
+
+        // Block chat from unauthenticated players (stops ad spam and coordination pre-login).
+        // Commands are gated separately by CommandsMixin so that /login still works.
+        ServerMessageEvents.ALLOW_CHAT_MESSAGE.register((message, sender, params) -> {
+            if (isAuthenticated(sender.getUUID())) {
+                return true;
+            }
+            sender.sendSystemMessage(Component.literal(
+                "§cYou must authenticate before chatting: §6/login <password>"));
+            LOGGER.warn("AUTH_BLOCKED_CHAT: user={} ip={}",
+                        sender.getName().getString(), sender.getIpAddress());
+            return false;
         });
 
         // Register commands
